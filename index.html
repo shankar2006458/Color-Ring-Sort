@@ -1,0 +1,1231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Color Ring Sort</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --leaf-900:#1f6a40;
+      --leaf-700:#2f8d52;
+      --leaf-500:#49bd68;
+      --leaf-300:#8ee587;
+      --cream:#fff7de;
+      --cream-2:#f5e8b8;
+      --ink:#256340;
+      --cyan1:#7df6ff; --cyan2:#08bcd2;
+      --purple1:#d9a2ff; --purple2:#8d54e5;
+      --yellow1:#fff89b; --yellow2:#ffc72d;
+      --orange1:#ffc27d; --orange2:#ff7e2b;
+      --pink1:#ffb3db; --pink2:#ef58a5;
+      --red1:#ffaaa0; --red2:#ef514a;
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;min-height:100%;overflow:hidden}
+    body{
+      font-family:'DM Sans',sans-serif;
+      color:var(--ink);
+    }
+
+    .game-shell{
+      width:100%;
+      min-height:100vh;
+      height:calc(var(--vh, 1vh) * 100);
+      position:relative;
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 50% 10%, rgba(255,255,255,.35), transparent 24%),
+        radial-gradient(circle at 50% 18%, #c6f78d 0%, #83df76 33%, #4fc469 68%, #2ba95d 100%);
+    }
+
+    .game-shell::before{
+      content:"";
+      position:absolute;
+      inset:-80%;
+      background:repeating-conic-gradient(from -10deg, rgba(255,255,255,.25) 0deg 6deg, transparent 6deg 18deg);
+      opacity:.42;
+      animation:spin 42s linear infinite;
+    }
+
+    .game-shell::after{
+      content:"";
+      position:absolute;
+      inset:auto -10% -20% -10%;
+      height:34%;
+      background:radial-gradient(ellipse at center, rgba(31,112,62,.23), transparent 68%);
+      filter:blur(10px);
+    }
+
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .sparkle{
+      position:absolute;
+      width:14px;height:14px;
+      opacity:.9;
+      z-index:1;
+      animation:twinkle 2.5s ease-in-out infinite;
+    }
+    .sparkle::before,.sparkle::after{
+      content:"";
+      position:absolute;
+      left:50%;top:50%;
+      transform:translate(-50%,-50%);
+      background:#fff;
+      border-radius:999px;
+    }
+    .sparkle::before{width:4px;height:14px}
+    .sparkle::after{width:14px;height:4px}
+    @keyframes twinkle{
+      0%,100%{transform:scale(.7) rotate(0);opacity:.35}
+      50%{transform:scale(1.12) rotate(45deg);opacity:1}
+    }
+
+    .main-wrap{
+      position:relative;
+      z-index:2;
+      width:100%;
+      height:100%;
+      max-width:1100px;
+      margin:0 auto;
+      padding:16px 20px 20px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .hidden-screen{display:none!important}
+
+    .hud{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-shrink:0;
+    }
+
+    .title-badge,.stat-card{
+      border:3px solid rgba(255,255,255,.86);
+      background:linear-gradient(180deg,#fffef4 0%,#fff0bd 100%);
+      box-shadow:0 7px 0 rgba(102,114,43,.2),0 12px 20px rgba(32,91,51,.16);
+    }
+
+    .title-badge{
+      padding:10px 18px 11px;
+      border-radius:23px;
+      transform:rotate(-1deg);
+    }
+
+    .stats{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .stat-card{
+      min-width:80px;
+      padding:7px 12px 8px;
+      border-radius:18px;
+      text-align:center;
+    }
+
+    .stat-label{
+      display:block;
+      font-size:10px;
+      line-height:1;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      margin-bottom:4px;
+    }
+
+    .mode-screen{
+      height:100vh;
+      height:calc(var(--vh, 1vh) * 100);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px 16px;
+      position:relative;
+      z-index:2;
+      overflow-y:auto;
+    }
+
+    .mode-panel{
+      width:min(100%, 960px);
+      text-align:center;
+    }
+
+    .mode-heading{
+      display:inline-block;
+      padding:10px 20px 11px;
+      border-radius:24px;
+      border:3px solid rgba(255,255,255,.86);
+      background:linear-gradient(180deg,#fffef4 0%,#fff0bd 100%);
+      box-shadow:0 7px 0 rgba(102,114,43,.2),0 12px 20px rgba(32,91,51,.16);
+      transform:rotate(-1deg);
+    }
+
+    .mode-subtitle{
+      margin:14px auto 20px;
+      max-width:500px;
+      font-weight:700;
+      text-shadow:0 1px 0 rgba(255,255,255,.4);
+    }
+
+    .mode-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:16px;
+    }
+
+    .mode-card{
+      position:relative;
+      overflow:hidden;
+      border:4px solid rgba(255,255,255,.78);
+      border-radius:28px;
+      padding:18px 16px 16px;
+      background:linear-gradient(180deg,#fffef3 0%,#fff0bb 100%);
+      box-shadow:0 9px 0 rgba(109,107,48,.2),0 18px 28px rgba(41,88,48,.2);
+      transition:transform .22s ease, box-shadow .22s ease, filter .22s ease;
+    }
+
+    .mode-card:hover{
+      transform:translateY(-5px);
+      box-shadow:0 12px 0 rgba(109,107,48,.18),0 22px 30px rgba(41,88,48,.2);
+      filter:brightness(1.02);
+    }
+
+    .mode-card::before{
+      content:"";
+      position:absolute;
+      inset:-40px auto auto -30px;
+      width:110px;height:110px;
+      border-radius:50%;
+      background:rgba(255,255,255,.26);
+    }
+
+    .mode-card.easy{background:linear-gradient(180deg,#f4fff2 0%,#dff9d4 100%)}
+    .mode-card.medium{background:linear-gradient(180deg,#fffdf1 0%,#ffe9b4 100%)}
+    .mode-card.hard{background:linear-gradient(180deg,#fff3ef 0%,#ffd0c2 100%)}
+
+    .mode-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:5px 11px;
+      border-radius:999px;
+      background:rgba(255,255,255,.7);
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      margin-bottom:10px;
+    }
+
+    .mini-stack{
+      width:88px;
+      height:96px;
+      position:relative;
+      margin:12px auto 10px;
+    }
+
+    .mini-rod{
+      position:absolute;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:10px;
+      width:8px;
+      height:74px;
+      border-radius:999px;
+      background:linear-gradient(90deg,#d7c58f 0%,#fff6d2 32%,#fffef1 52%,#e4d293 100%);
+      z-index:1;
+    }
+
+    .mini-base{
+      position:absolute;
+      bottom:0;
+      left:4px;
+      right:4px;
+      height:12px;
+      border-radius:999px;
+      background:linear-gradient(180deg,#fff4c7 0%,#e9d79a 100%);
+      box-shadow:0 4px 0 #c4ad70;
+      z-index:2;
+    }
+
+    .mini-rings{
+      position:absolute;
+      left:0; right:0; bottom:12px;
+      display:flex;
+      flex-direction:column-reverse;
+      align-items:center;
+      gap:3px;
+      z-index:3;
+    }
+
+    .mini-ring{
+      width:66px;
+      height:15px;
+      border-radius:999px;
+      box-shadow:inset 0 2px 3px rgba(255,255,255,.6), inset 0 -2px 3px rgba(68,42,28,.12), 0 3px 0 rgba(90,68,23,.15);
+    }
+
+    .mini-ring.cyan{background:linear-gradient(180deg,var(--cyan1),var(--cyan2))}
+    .mini-ring.purple{background:linear-gradient(180deg,var(--purple1),var(--purple2))}
+    .mini-ring.yellow{background:linear-gradient(180deg,var(--yellow1),var(--yellow2))}
+    .mini-ring.orange{background:linear-gradient(180deg,var(--orange1),var(--orange2))}
+    .mini-ring.pink{background:linear-gradient(180deg,var(--pink1),var(--pink2))}
+    .mini-ring.red{background:linear-gradient(180deg,var(--red1),var(--red2))}
+
+    .mode-copy{
+      min-height:38px;
+      margin-top:4px;
+      line-height:1.3;
+      font-size:0.9rem;
+    }
+
+    .mode-start{
+      width:100%;
+      border:0;
+      margin-top:12px;
+      border-radius:17px;
+      padding:11px 12px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:7px;
+      color:#fff;
+      font-weight:900;
+      font-size:0.95rem;
+      box-shadow:0 5px 0 rgba(63,87,44,.22),0 9px 14px rgba(45,85,47,.14);
+      transition:transform .18s ease;
+    }
+    .mode-start:hover{transform:translateY(-2px)}
+    .mode-start:focus-visible{outline:4px solid rgba(255,255,255,.9);outline-offset:3px}
+    .mode-start svg{width:16px;height:16px;stroke-width:3}
+
+    .easy-btn{background:linear-gradient(180deg,#8ff39a,#37c95e)}
+    .medium-btn{background:linear-gradient(180deg,#ffd878,#f5a624)}
+    .hard-btn{background:linear-gradient(180deg,#ff9a8f,#ef514a)}
+
+    .board-zone{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0;
+      min-height:0;
+    }
+
+    .board{
+      width:100%;
+      max-width:750px;
+      display:grid;
+      grid-template-columns:repeat(6,minmax(60px,1fr));
+      align-items:end;
+      gap:12px;
+      padding:4px 6px;
+    }
+
+    .stack{
+      position:relative;
+      height:clamp(170px,28vw,280px);
+      border:0;
+      background:transparent;
+      border-radius:22px;
+      cursor:pointer;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-end;
+      align-items:center;
+      transition:transform .22s ease, filter .22s ease;
+      outline:none;
+    }
+
+    .stack:focus-visible{
+      box-shadow:0 0 0 4px rgba(255,255,255,.92),0 0 0 8px rgba(39,121,71,.35);
+    }
+
+    .stack.selected{
+      transform:translateY(-8px);
+      filter:drop-shadow(0 8px 6px rgba(57,93,38,.2));
+    }
+
+    .stack.invalid{animation:shake .28s ease}
+    @keyframes shake{
+      0%,100%{transform:translateX(0)}
+      25%{transform:translateX(-5px)}
+      50%{transform:translateX(5px)}
+      75%{transform:translateX(-3px)}
+    }
+
+    .rod{
+      position:absolute;
+      bottom:12px;
+      width:10px;
+      height:calc(100% - 20px);
+      border-radius:999px;
+      background:linear-gradient(90deg,#d7c58f 0%,#fff6d2 32%,#fffef1 52%,#e4d293 100%);
+      box-shadow:inset -2px 0 2px rgba(136,111,54,.16),0 4px 3px rgba(93,102,51,.12);
+      z-index:1;
+    }
+
+    .base{
+      position:absolute;
+      bottom:0;
+      width:90%;
+      height:16px;
+      border-radius:999px;
+      background:linear-gradient(180deg,#fff4c7 0%,#e9d79a 100%);
+      box-shadow:0 4px 0 #c4ad70,0 8px 12px rgba(76,102,43,.17);
+      z-index:2;
+    }
+
+    .rings{
+      width:100%;
+      position:relative;
+      z-index:3;
+      display:flex;
+      flex-direction:column-reverse;
+      align-items:center;
+      gap:4px;
+      padding-bottom:16px;
+    }
+
+    .ring{
+      position:relative;
+      width:64px;
+      height:22px;
+      border-radius:999px;
+      box-shadow:inset 0 4px 4px rgba(255,255,255,.62),inset 0 -4px 6px rgba(68,42,28,.15),0 4px 0 rgba(90,68,23,.15),0 6px 10px rgba(62,73,45,.16);
+    }
+
+    .ring::before{
+      content:"";
+      position:absolute;
+      left:17%;right:17%;top:20%;
+      height:26%;
+      border-radius:999px;
+      background:rgba(255,255,255,.24);
+    }
+
+    .ring::after{
+      content:"";
+      position:absolute;
+      top:4px;right:7px;
+      width:15%;height:18%;
+      border-radius:999px;
+      background:rgba(255,255,255,.52);
+    }
+
+    .ring.cyan{background:linear-gradient(180deg,var(--cyan1),var(--cyan2))}
+    .ring.purple{background:linear-gradient(180deg,var(--purple1),var(--purple2))}
+    .ring.yellow{background:linear-gradient(180deg,var(--yellow1),var(--yellow2))}
+    .ring.orange{background:linear-gradient(180deg,var(--orange1),var(--orange2))}
+    .ring.pink{background:linear-gradient(180deg,var(--pink1),var(--pink2))}
+    .ring.red{background:linear-gradient(180deg,var(--red1),var(--red2))}
+
+    footer{
+      flex-shrink:0;
+      padding-top:4px;
+      padding-bottom:env(safe-area-inset-bottom, 0px);
+    }
+
+    .controls{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .game-btn{
+      border:0;
+      min-width:95px;
+      padding:11px 13px 12px;
+      border-radius:20px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:7px;
+      color:#fff;
+      font-weight:900;
+      font-size:0.9rem;
+      letter-spacing:.01em;
+      text-shadow:0 1px 0 rgba(0,0,0,.08);
+      box-shadow:0 5px 0 rgba(64,92,47,.23),0 8px 14px rgba(50,95,51,.16);
+      transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;
+    }
+    .game-btn:hover{transform:translateY(-2px);filter:brightness(1.03);box-shadow:0 7px 0 rgba(64,92,47,.2),0 12px 18px rgba(50,95,51,.16)}
+    .game-btn:active{transform:translateY(2px);box-shadow:0 3px 0 rgba(64,92,47,.23),0 6px 10px rgba(50,95,51,.14)}
+    .game-btn:focus-visible{outline:4px solid rgba(255,255,255,.92);outline-offset:3px}
+    .game-btn svg{width:16px;height:16px;stroke-width:3}
+
+    .restart{background:linear-gradient(180deg,#ffb665 0%,#ff8138 100%)}
+    .undo{background:linear-gradient(180deg,#95dfff 0%,#3aa8e7 100%)}
+    .mode{background:linear-gradient(180deg,#8ff39a 0%,#37c95e 100%)}
+    .next{background:linear-gradient(180deg,#e39cff 0%,#a85beb 100%)}
+    .next.win-pulse{animation:pulse 1.15s ease-in-out infinite}
+    @keyframes pulse{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2px) scale(1.04)}}
+
+    .tip{
+      text-align:center;
+      margin-top:6px;
+      font-weight:700;
+      font-size:0.85rem;
+    }
+
+    .tip1{
+      text-align:center;
+      margin-top:4px;
+      font-weight:300;
+      font-size:0.75rem;
+    }
+
+    .overlay{
+      position:fixed;
+      inset:0;
+      z-index:20;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      background:rgba(22,80,43,.22);
+      backdrop-filter:blur(5px);
+    }
+    .overlay.show{display:flex}
+
+    .complete-card{
+      width:min(90vw,340px);
+      padding:24px 22px 22px;
+      border-radius:28px;
+      text-align:center;
+      border:4px solid rgba(255,255,255,.8);
+      background:linear-gradient(180deg,#fffef3 0%,#fff0bb 100%);
+      box-shadow:0 10px 0 rgba(116,98,36,.18),0 22px 36px rgba(41,88,48,.28);
+      animation:pop .34s cubic-bezier(.21,1.4,.44,1) forwards;
+      transform:scale(.8);
+      opacity:0;
+    }
+    @keyframes pop{to{transform:scale(1);opacity:1}}
+
+    .trophy{
+      width:68px;height:68px;
+      margin:0 auto 8px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:linear-gradient(180deg,#fff8a6,#ffd84a);
+      color:#c98900;
+      box-shadow:inset 0 4px 6px rgba(255,255,255,.55),0 5px 0 #d7aa1f;
+    }
+    .trophy svg{width:32px;height:32px;stroke-width:2.8}
+
+    .complete-button{
+      margin-top:16px;
+      width:100%;
+      padding:12px 14px 13px;
+      border:0;
+      border-radius:17px;
+      color:#fff;
+      font-weight:900;
+      font-size:0.95rem;
+      background:linear-gradient(180deg,#8ff39a,#37c95e);
+      box-shadow:0 4px 0 #27984a,0 8px 14px rgba(73,122,58,.14);
+      transition:transform .18s ease;
+    }
+    .complete-button:hover{transform:translateY(-2px)}
+    .complete-button:focus-visible{outline:4px solid rgba(47,122,65,.25);outline-offset:3px}
+
+    .confetti{
+      position:fixed;
+      top:-20px;
+      width:8px;
+      height:12px;
+      border-radius:2px;
+      z-index:30;
+      pointer-events:none;
+      animation:fall linear forwards;
+    }
+    @keyframes fall{
+      to{transform:translate3d(var(--x),110vh,0) rotate(720deg);opacity:.95}
+    }
+
+    /* Touch optimizations */
+    .stack, .game-btn, .mode-start, .mode-card, .complete-button {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .game-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      filter: grayscale(0.3);
+    }
+    .game-btn:disabled:hover {
+      transform: none !important;
+      box-shadow: 0 5px 0 rgba(64,92,47,.23),0 8px 14px rgba(50,95,51,.16);
+    }
+
+    /* ============ MOBILE: 840px ============ */
+    @media (max-width:840px){
+      .mode-grid{grid-template-columns:1fr; max-width:360px; margin:0 auto}
+      .mode-card{min-height:auto; padding:16px 14px 14px}
+      .mode-subtitle{font-size:0.9rem; margin:10px auto 16px}
+      .mode-heading h1{font-size:1.4rem}
+    }
+
+    /* ============ MOBILE: 760px ============ */
+    @media (max-width:760px){
+      .main-wrap{padding:10px 8px 14px;gap:8px}
+      .hud{gap:6px; flex-wrap:wrap}
+      .title-badge{padding:7px 12px 8px; border-radius:18px}
+      .title-badge h1{font-size:0.95rem}
+      .stats{gap:5px}
+      .stat-card{min-width:58px;padding:5px 7px 6px;border-radius:14px}
+      .stat-label{font-size:8px; margin-bottom:2px}
+      .stat-card strong{font-size:0.8rem}
+      .board{
+        width:100%;
+        max-width:400px;
+        grid-template-columns:repeat(3,minmax(64px,1fr));
+        gap:10px 8px;
+        padding:2px 4px 6px;
+      }
+      .stack{height:clamp(140px,30vw,190px); border-radius:18px}
+      .ring{
+        width:min(90%,70px);
+        height:clamp(20px,4vw,28px);
+      }
+      .rod{width:9px; bottom:10px}
+      .base{height:13px; bottom:0}
+      .controls{gap:5px}
+      .game-btn{min-width:68px;padding:9px 10px 10px;border-radius:16px; font-size:11px; gap:5px}
+      .game-btn svg{width:14px;height:14px}
+      .tip{font-size:10px; margin-top:3px}
+      .tip1{font-size:8px; margin-top:1px}
+      .mode-heading{padding:8px 14px 9px}
+      .mode-heading h1{font-size:1.2rem}
+      .mode-card h2{font-size:1rem}
+      .mode-copy{font-size:0.8rem; min-height:30px}
+      .mode-start{padding:9px 10px 10px; font-size:0.85rem; border-radius:15px}
+      .complete-card{padding:20px 16px 18px}
+      .complete-card h2{font-size:1.3rem}
+      .trophy{width:56px;height:56px}
+      .trophy svg{width:26px;height:26px}
+    }
+
+    /* ============ MOBILE: 430px ============ */
+    @media (max-width:430px){
+      .main-wrap{
+        padding:6px 5px 4px;
+        gap:4px;
+      }
+      .hud{gap:4px}
+      .title-badge{max-width:100px; padding:5px 8px 6px}
+      .title-badge h1{font-size:0.8rem}
+      .stat-card{min-width:48px;padding:4px 5px 5px;border-radius:11px}
+      .stat-label{font-size:7px}
+      .stat-card strong{font-size:0.7rem}
+      .board{
+        width:100%;
+        max-width:360px;
+        gap:8px 6px;
+        grid-template-columns:repeat(3,1fr);
+      }
+      .stack{
+        height:150px;
+      }
+      .ring{
+        width:min(88%,62px);
+        height:clamp(16px,3.2vw,22px);
+      }
+      .rings{gap:3px; padding-bottom:13px}
+      .rod{width:8px; bottom:8px}
+      .base{height:11px}
+      .controls{gap:4px}
+      .game-btn{min-width:56px;padding:7px 8px 8px;border-radius:14px; font-size:10px; gap:3px}
+      .game-btn svg{width:12px;height:12px}
+      .tip{font-size:9px}
+      .tip1{font-size:7px}
+      .mode-heading{padding:6px 10px 7px; border-radius:20px}
+      .mode-heading h1{font-size:1rem}
+      .mode-card{padding:12px 10px 10px; border-radius:22px}
+      .mode-card h2{font-size:0.9rem}
+      .mode-pill{font-size:8px; padding:4px 8px; gap:4px}
+      .mini-stack{width:60px;height:68px}
+      .mini-rod{width:6px;height:50px; bottom:8px}
+      .mini-ring{width:46px;height:11px}
+      .mini-base{height:10px}
+      .mode-start{padding:7px 9px 8px; font-size:0.75rem; border-radius:13px}
+      .mode-start svg{width:13px;height:13px}
+      .mode-subtitle{font-size:0.8rem}
+      .complete-card{width:min(88vw,300px); padding:16px 14px}
+      .complete-card h2{font-size:1.1rem}
+      .trophy{width:48px;height:48px}
+      .trophy svg{width:22px;height:22px}
+
+      .controls{
+        transform:scale(.92);
+      }
+
+      .tip{
+        margin-top:0;
+      }
+    }
+
+    /* ============ MOBILE: 350px ============ */
+    @media (max-width:350px){
+      .main-wrap{padding:6px 4px 8px;gap:4px}
+      .board{
+        max-width:280px;
+        gap:5px 3px;
+      }
+      .stack{height:clamp(95px,22vw,125px)}
+      .ring{
+        width:min(85%,54px);
+        height:clamp(13px,2.5vw,18px);
+      }
+      .game-btn{min-width:48px;padding:5px 6px 6px; font-size:9px; border-radius:12px}
+      .game-btn svg{width:10px;height:10px}
+      .stat-card{min-width:42px;padding:3px 4px 4px}
+      .stat-label{font-size:6px}
+      .stat-card strong{font-size:0.65rem}
+      .title-badge{max-width:85px}
+      .title-badge h1{font-size:0.7rem}
+    }
+
+    /* Touch device hover removal */
+    @media (hover: none) and (pointer: coarse) {
+      .stack:hover, .game-btn:hover, .mode-card:hover, .mode-start:hover, .complete-button:hover {
+        transform: none !important;
+        filter: none !important;
+        box-shadow: inherit !important;
+      }
+      .stack:active {
+        transform: scale(0.95) !important;
+      }
+      .game-btn:active, .mode-start:active, .complete-button:active {
+        transform: translateY(2px) !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell">
+    <span class="sparkle" style="left:9%;top:16%;animation-delay:.1s"></span>
+    <span class="sparkle" style="left:86%;top:14%;animation-delay:.7s"></span>
+    <span class="sparkle" style="left:7%;top:60%;animation-delay:1.1s"></span>
+    <span class="sparkle" style="left:91%;top:54%;animation-delay:1.7s"></span>
+    <span class="sparkle" style="left:20%;top:88%;animation-delay:.9s"></span>
+    <span class="sparkle" style="left:77%;top:82%;animation-delay:1.3s"></span>
+
+    <!-- Mode Selection Screen -->
+    <section id="modeScreen" class="mode-screen" aria-labelledby="modeTitle">
+      <div class="mode-panel">
+        <div class="mode-heading">
+          <h1 id="modeTitle" class="text-2xl font-extrabold">Color Ring Sort</h1>
+        </div>
+        <p class="mode-subtitle text-lg">Stack rings by colour to clear the board</p>
+        <div class="mode-grid">
+          <article class="mode-card easy">
+            <div class="mode-pill"><i data-lucide="leaf"></i><span>Relaxed</span></div>
+            <h2 class="text-xl font-extrabold">Easy</h2>
+            <div class="mini-stack" aria-hidden="true">
+              <div class="mini-rod"></div>
+              <div class="mini-rings">
+                <div class="mini-ring cyan"></div>
+                <div class="mini-ring yellow"></div>
+                <div class="mini-ring purple"></div>
+              </div>
+              <div class="mini-base"></div>
+            </div>
+            <p class="mode-copy">3 colours, 3 rings each – a gentle start.</p>
+            <button id="easyBtn" type="button" class="mode-start easy-btn">
+              <span>Start Easy</span><i data-lucide="play"></i>
+            </button>
+          </article>
+          <article class="mode-card medium">
+            <div class="mode-pill"><i data-lucide="sparkles"></i><span>Balanced</span></div>
+            <h2 class="text-xl font-extrabold">Medium</h2>
+            <div class="mini-stack" aria-hidden="true">
+              <div class="mini-rod"></div>
+              <div class="mini-rings">
+                <div class="mini-ring cyan"></div>
+                <div class="mini-ring orange"></div>
+                <div class="mini-ring purple"></div>
+                <div class="mini-ring yellow"></div>
+              </div>
+              <div class="mini-base"></div>
+            </div>
+            <p class="mode-copy">4 colours, 4 rings each – keep your eyes sharp.</p>
+            <button id="mediumBtn" type="button" class="mode-start medium-btn">
+              <span>Start Medium</span><i data-lucide="play"></i>
+            </button>
+          </article>
+          <article class="mode-card hard">
+            <div class="mode-pill"><i data-lucide="flame"></i><span>Tricky</span></div>
+            <h2 class="text-xl font-extrabold">Hard</h2>
+            <div class="mini-stack" aria-hidden="true">
+              <div class="mini-rod"></div>
+              <div class="mini-rings">
+                <div class="mini-ring cyan"></div>
+                <div class="mini-ring red"></div>
+                <div class="mini-ring purple"></div>
+                <div class="mini-ring orange"></div>
+                <div class="mini-ring pink"></div>
+              </div>
+              <div class="mini-base"></div>
+            </div>
+            <p class="mode-copy">5 colours, 5 rings each – only the cleverest sorters win.</p>
+            <button id="hardBtn" type="button" class="mode-start hard-btn">
+              <span>Start Hard</span><i data-lucide="play"></i>
+            </button>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="main-wrap hidden-screen">
+      <header class="hud" aria-label="Game status">
+        <div class="title-badge">
+          <h1 class="text-xl font-extrabold">Ring Sort</h1>
+        </div>
+        <div class="stats">
+          <div class="stat-card">
+            <span class="stat-label">Mode</span>
+            <strong id="difficultyText" class="block text-lg">Easy</strong>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Level</span>
+            <strong id="levelText" class="block text-lg">01</strong>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Moves</span>
+            <strong id="movesText" class="block text-lg">0</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="board-zone" aria-label="Color sorting puzzle board">
+        <div id="board" class="board"></div>
+      </section>
+
+      <footer>
+        <div class="controls">
+          <button id="restartBtn" type="button" class="game-btn restart">
+            <i data-lucide="rotate-ccw"></i><span>Restart</span>
+          </button>
+          <button id="undoBtn" type="button" class="game-btn undo">
+            <i data-lucide="undo-2"></i><span>Undo</span>
+          </button>
+          <button id="modeBtn" type="button" class="game-btn mode">
+            <i data-lucide="layout-grid"></i>
+            <span>Mode</span>
+          </button>
+          <button id="nextBtn" type="button" class="game-btn next">
+            <span>Next</span><i data-lucide="arrow-right"></i>
+          </button>
+        </div>
+        <p class="tip">Tap a stack to pick up the top ring, then tap another to drop it.</p>
+        <p class="tip1">Developed by ~ Shankar Prasad Pyke.</p>
+      </footer>
+    </div>
+
+    <!-- Win Overlay -->
+    <div id="winOverlay" class="overlay" aria-hidden="true">
+      <div class="complete-card" role="dialog" aria-modal="true" aria-labelledby="completeTitle">
+        <div class="trophy"><i data-lucide="trophy"></i></div>
+        <h2 id="completeTitle" class="text-2xl font-extrabold">You Win!</h2>
+        <p class="mt-2">Amazing sorting! Ready for the next challenge?</p>
+        <button id="completeBtn" type="button" class="complete-button">Next Level</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Fix mobile viewport height
+    function setVH() {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+    setVH();
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', () => setTimeout(setVH, 100));
+
+    // ---------- Puzzle Data ----------
+    const LEVELS = {
+      easy: [
+        [['cyan','purple','yellow'], ['yellow','cyan','purple'], ['purple','yellow','cyan']],
+        [['purple','yellow','cyan'], ['cyan','purple','yellow'], ['yellow','cyan','purple']],
+        [['yellow','cyan','purple'], ['purple','yellow','cyan'], ['cyan','purple','yellow']],
+        [['cyan','cyan','yellow'], ['purple','yellow','purple'], ['yellow','purple','cyan']],
+        [['purple','purple','cyan'], ['yellow','cyan','yellow'], ['cyan','yellow','purple']],
+        [['yellow','yellow','purple'], ['cyan','purple','cyan'], ['purple','cyan','yellow']],
+        [['cyan','purple','purple'], ['yellow','cyan','cyan'], ['purple','yellow','yellow']],
+        [['purple','yellow','yellow'], ['cyan','purple','purple'], ['yellow','cyan','cyan']],
+        [['yellow','cyan','cyan'], ['purple','yellow','yellow'], ['cyan','purple','purple']],
+        [['cyan','yellow','purple'], ['purple','cyan','yellow'], ['yellow','purple','cyan']],
+        [['cyan','purple','cyan'], ['yellow','yellow','purple'], ['purple','cyan','yellow']],
+        [['purple','cyan','purple'], ['cyan','yellow','cyan'], ['yellow','purple','yellow']],
+        [['yellow','purple','yellow'], ['purple','cyan','purple'], ['cyan','yellow','cyan']],
+        [['cyan','yellow','cyan'], ['yellow','purple','purple'], ['purple','cyan','yellow']],
+        [['purple','purple','yellow'], ['cyan','cyan','purple'], ['yellow','yellow','cyan']],
+        [['yellow','cyan','yellow'], ['purple','purple','cyan'], ['cyan','yellow','purple']],
+        [['cyan','cyan','purple'], ['yellow','purple','cyan'], ['purple','yellow','yellow']],
+        [['purple','yellow','purple'], ['cyan','cyan','yellow'], ['yellow','purple','cyan']],
+        [['yellow','purple','cyan'], ['purple','yellow','yellow'], ['cyan','cyan','purple']],
+        [['cyan','yellow','yellow'], ['yellow','purple','cyan'], ['purple','cyan','purple']],
+        [['purple','cyan','cyan'], ['cyan','yellow','purple'], ['yellow','purple','yellow']],
+        [['yellow','yellow','purple'], ['purple','cyan','cyan'], ['cyan','purple','yellow']],
+        [['cyan','purple','yellow'], ['purple','cyan','yellow'], ['yellow','yellow','purple']],
+        [['purple','yellow','cyan'], ['yellow','purple','purple'], ['cyan','cyan','yellow']],
+        [['yellow','cyan','purple'], ['cyan','yellow','cyan'], ['purple','purple','yellow']],
+        [['cyan','yellow','purple'], ['yellow','cyan','yellow'], ['purple','purple','cyan']],
+        [['purple','purple','yellow'], ['cyan','yellow','cyan'], ['yellow','cyan','purple']],
+        [['yellow','cyan','cyan'], ['purple','purple','yellow'], ['cyan','yellow','purple']],
+        [['cyan','cyan','purple'], ['yellow','yellow','cyan'], ['purple','purple','yellow']],
+        [['purple','yellow','cyan'], ['cyan','purple','purple'], ['yellow','cyan','yellow']]
+      ],
+      medium: [
+        [['cyan','orange','purple','yellow'], ['purple','yellow','orange','cyan'], ['yellow','cyan','orange','purple'], ['orange','purple','cyan','yellow'], []],
+        [['orange','yellow','cyan','purple'], ['cyan','purple','yellow','orange'], ['purple','orange','yellow','cyan'], ['yellow','cyan','purple','orange'], []],
+        [['yellow','purple','orange','cyan'], ['orange','cyan','purple','yellow'], ['cyan','yellow','orange','purple'], ['purple','orange','cyan','yellow'], []],
+        [['purple','cyan','yellow','orange'], ['yellow','orange','cyan','purple'], ['orange','purple','cyan','yellow'], ['cyan','yellow','purple','orange'], []],
+        [['cyan','cyan','yellow','purple'], ['purple','orange','orange','yellow'], ['yellow','purple','cyan','orange'], ['orange','yellow','purple','cyan'], []],
+        [['orange','purple','purple','cyan'], ['cyan','yellow','orange','orange'], ['purple','cyan','yellow','yellow'], ['yellow','orange','cyan','purple'], []],
+        [['yellow','orange','cyan','cyan'], ['purple','purple','yellow','orange'], ['cyan','yellow','orange','purple'], ['orange','cyan','purple','yellow'], []],
+        [['purple','yellow','orange','orange'], ['cyan','orange','purple','purple'], ['orange','cyan','yellow','cyan'], ['yellow','purple','cyan','yellow'], []],
+        [['cyan','purple','purple','orange'], ['orange','cyan','cyan','yellow'], ['yellow','orange','yellow','purple'], ['purple','yellow','orange','cyan'], []],
+        [['orange','cyan','yellow','yellow'], ['purple','yellow','cyan','orange'], ['cyan','orange','purple','purple'], ['yellow','purple','orange','cyan'], []],
+        [['yellow','yellow','purple','cyan'], ['cyan','purple','orange','orange'], ['orange','cyan','yellow','purple'], ['purple','orange','cyan','yellow'], []],
+        [['purple','orange','cyan','yellow'], ['yellow','cyan','purple','cyan'], ['cyan','yellow','orange','orange'], ['orange','purple','yellow','purple'], []],
+        [['cyan','yellow','orange','purple'], ['orange','purple','cyan','cyan'], ['purple','orange','yellow','yellow'], ['yellow','cyan','purple','orange'], []],
+        [['orange','purple','yellow','cyan'], ['cyan','orange','purple','yellow'], ['yellow','cyan','orange','purple'], ['purple','yellow','cyan','orange'], []],
+        [['yellow','cyan','purple','orange'], ['purple','yellow','cyan','orange'], ['orange','purple','yellow','cyan'], ['cyan','orange','purple','yellow'], []],
+        [['purple','yellow','cyan','purple'], ['cyan','orange','yellow','orange'], ['orange','cyan','orange','yellow'], ['yellow','purple','purple','cyan'], []],
+        [['cyan','purple','orange','cyan'], ['purple','yellow','yellow','orange'], ['yellow','orange','purple','purple'], ['orange','cyan','cyan','yellow'], []],
+        [['orange','cyan','purple','yellow'], ['yellow','orange','orange','purple'], ['purple','purple','cyan','cyan'], ['cyan','yellow','yellow','orange'], []],
+        [['yellow','orange','cyan','orange'], ['cyan','purple','yellow','yellow'], ['purple','cyan','purple','cyan'], ['orange','yellow','orange','purple'], []],
+        [['purple','purple','yellow','cyan'], ['orange','yellow','purple','orange'], ['cyan','orange','cyan','yellow'], ['yellow','cyan','orange','purple'], []],
+        [['cyan','yellow','purple','orange'], ['purple','cyan','orange','yellow'], ['orange','yellow','cyan','purple'], ['yellow','orange','purple','cyan'], []],
+        [['orange','cyan','yellow','purple'], ['yellow','orange','purple','cyan'], ['purple','yellow','cyan','orange'], ['cyan','purple','orange','yellow'], []],
+        [['yellow','orange','purple','cyan'], ['cyan','yellow','orange','purple'], ['orange','purple','cyan','yellow'], ['purple','cyan','yellow','orange'], []],
+        [['purple','purple','orange','yellow'], ['yellow','cyan','cyan','orange'], ['cyan','yellow','purple','cyan'], ['orange','orange','yellow','purple'], []],
+        [['cyan','cyan','yellow','orange'], ['orange','purple','purple','yellow'], ['purple','orange','cyan','purple'], ['yellow','yellow','orange','cyan'], []],
+        [['orange','orange','purple','cyan'], ['purple','cyan','yellow','yellow'], ['yellow','yellow','cyan','orange'], ['cyan','purple','orange','purple'], []],
+        [['yellow','purple','cyan','yellow'], ['cyan','orange','orange','purple'], ['purple','cyan','purple','orange'], ['orange','yellow','yellow','cyan'], []],
+        [['purple','yellow','orange','purple'], ['yellow','cyan','cyan','orange'], ['orange','purple','yellow','cyan'], ['cyan','orange','purple','yellow'], []],
+        [['cyan','orange','cyan','purple'], ['purple','yellow','yellow','cyan'], ['orange','cyan','purple','yellow'], ['yellow','purple','orange','orange'], []],
+        [['orange','cyan','yellow','orange'], ['yellow','purple','purple','cyan'], ['cyan','orange','orange','purple'], ['purple','yellow','cyan','yellow'], []]
+      ],
+      hard: [
+        [['cyan','pink','yellow','orange','purple'],['purple','orange','pink','cyan','yellow'],['yellow','cyan','purple','pink','orange'],['orange','yellow','cyan','purple','pink'],['pink','purple','orange','yellow','cyan'],[]],
+        [['pink','orange','purple','yellow','cyan'],['yellow','cyan','orange','pink','purple'],['purple','pink','cyan','orange','yellow'],['cyan','purple','yellow','pink','orange'],['orange','yellow','pink','cyan','purple'],[]],
+        [['orange','yellow','cyan','purple','pink'],['cyan','pink','purple','orange','yellow'],['pink','purple','yellow','cyan','orange'],['yellow','orange','pink','purple','cyan'],['purple','cyan','orange','yellow','pink'],[]],
+        [['yellow','purple','pink','cyan','orange'],['orange','cyan','yellow','pink','purple'],['purple','pink','orange','yellow','cyan'],['cyan','orange','purple','pink','yellow'],['pink','yellow','cyan','orange','purple'],[]],
+        [['purple','cyan','orange','pink','yellow'],['pink','yellow','cyan','purple','orange'],['cyan','orange','yellow','purple','pink'],['orange','purple','pink','yellow','cyan'],['yellow','pink','purple','cyan','orange'],[]],
+        [['cyan','cyan','pink','orange','yellow'],['purple','yellow','orange','pink','purple'],['yellow','orange','purple','cyan','pink'],['pink','purple','yellow','purple','orange'],['orange','pink','cyan','yellow','cyan'],[]],
+        [['pink','orange','cyan','yellow','purple'],['orange','purple','pink','cyan','yellow'],['purple','cyan','yellow','orange','cyan'],['yellow','pink','orange','purple','pink'],['cyan','yellow','purple','pink','orange'],[]],
+        [['yellow','purple','orange','pink','cyan'],['cyan','orange','yellow','purple','pink'],['purple','pink','cyan','yellow','orange'],['pink','cyan','purple','orange','yellow'],['orange','yellow','pink','cyan','purple'],[]],
+        [['orange','cyan','pink','yellow','purple'],['yellow','pink','purple','cyan','orange'],['cyan','purple','orange','pink','yellow'],['purple','yellow','cyan','orange','pink'],['pink','orange','yellow','purple','cyan'],[]],
+        [['cyan','yellow','orange','purple','pink'],['pink','purple','cyan','orange','yellow'],['purple','orange','yellow','pink','cyan'],['orange','cyan','pink','yellow','purple'],['yellow','pink','purple','cyan','orange'],[]],
+        [['purple','pink','cyan','orange','cyan'],['pink','cyan','yellow','purple','yellow'],['yellow','orange','purple','pink','orange'],['orange','yellow','pink','cyan','purple'],['cyan','purple','orange','yellow','pink'],[]],
+        [['orange','cyan','purple','pink','yellow'],['cyan','yellow','pink','orange','purple'],['pink','purple','cyan','yellow','orange'],['purple','orange','yellow','cyan','pink'],['yellow','pink','orange','purple','cyan'],[]],
+        [['yellow','purple','pink','cyan','orange'],['pink','orange','cyan','purple','yellow'],['purple','cyan','yellow','orange','pink'],['cyan','yellow','orange','pink','purple'],['orange','pink','purple','yellow','cyan'],[]],
+        [['cyan','orange','yellow','purple','pink'],['purple','pink','cyan','yellow','orange'],['yellow','cyan','purple','pink','purple'],['pink','purple','orange','cyan','yellow'],['orange','yellow','pink','orange','cyan'],[]],
+        [['pink','cyan','purple','orange','yellow'],['orange','yellow','cyan','pink','purple'],['cyan','purple','pink','yellow','orange'],['yellow','orange','purple','cyan','pink'],['purple','pink','orange','yellow','cyan'],[]],
+        [['orange','purple','yellow','cyan','pink'],['cyan','orange','pink','purple','yellow'],['pink','yellow','cyan','orange','purple'],['yellow','cyan','orange','pink','cyan'],['purple','pink','purple','yellow','orange'],[]],
+        [['yellow','orange','purple','pink','cyan'],['purple','cyan','orange','yellow','pink'],['pink','purple','cyan','orange','yellow'],['orange','yellow','pink','cyan','purple'],['cyan','pink','yellow','purple','orange'],[]],
+        [['purple','pink','yellow','orange','cyan'],['orange','cyan','purple','pink','yellow'],['yellow','purple','cyan','orange','pink'],['pink','yellow','orange','cyan','purple'],['cyan','orange','pink','purple','yellow'],[]],
+        [['cyan','purple','orange','yellow','pink'],['yellow','cyan','purple','pink','orange'],['orange','pink','cyan','purple','yellow'],['pink','yellow','cyan','orange','purple'],['purple','orange','yellow','cyan','pink'],[]],
+        [['pink','yellow','cyan','purple','orange'],['purple','orange','pink','cyan','yellow'],['orange','cyan','yellow','pink','purple'],['yellow','purple','orange','cyan','pink'],['cyan','pink','purple','orange','yellow'],[]],
+        [['yellow','cyan','orange','pink','purple'],['cyan','pink','purple','yellow','orange'],['purple','orange','pink','cyan','yellow'],['pink','yellow','cyan','orange','purple'],['orange','purple','yellow','purple','cyan'],[]],
+        [['orange','pink','purple','cyan','yellow'],['purple','cyan','yellow','orange','pink'],['yellow','purple','pink','cyan','orange'],['cyan','orange','purple','yellow','pink'],['pink','yellow','orange','purple','cyan'],[]],
+        [['cyan','yellow','pink','purple','orange'],['pink','purple','orange','cyan','yellow'],['orange','cyan','yellow','pink','purple'],['yellow','orange','purple','cyan','pink'],['purple','pink','cyan','orange','yellow'],[]],
+        [['purple','orange','cyan','yellow','pink'],['yellow','pink','purple','orange','cyan'],['cyan','purple','yellow','pink','orange'],['pink','cyan','orange','purple','yellow'],['orange','yellow','pink','cyan','purple'],[]],
+        [['orange','cyan','pink','purple','yellow'],['cyan','yellow','orange','pink','purple'],['pink','purple','yellow','cyan','orange'],['yellow','orange','purple','pink','cyan'],['purple','pink','cyan','orange','yellow'],[]],
+        [['pink','orange','yellow','cyan','purple'],['cyan','purple','orange','yellow','pink'],['yellow','pink','cyan','purple','orange'],['purple','cyan','pink','orange','yellow'],['orange','yellow','purple','pink','cyan'],[]],
+        [['yellow','purple','pink','orange','cyan'],['orange','pink','cyan','purple','yellow'],['purple','yellow','orange','cyan','pink'],['pink','cyan','purple','yellow','orange'],['cyan','orange','yellow','pink','purple'],[]],
+        [['cyan','orange','purple','pink','yellow'],['purple','yellow','pink','cyan','orange'],['pink','purple','yellow','orange','cyan'],['yellow','cyan','orange','purple','pink'],['orange','pink','cyan','yellow','purple'],[]],
+        [['purple','pink','orange','yellow','cyan'],['orange','cyan','pink','purple','yellow'],['yellow','orange','cyan','pink','purple'],['cyan','purple','yellow','orange','pink'],['pink','yellow','purple','cyan','orange'],[]],
+        [['orange','yellow','cyan','purple','pink'],['pink','purple','yellow','orange','cyan'],['cyan','orange','purple','pink','yellow'],['purple','pink','orange','cyan','yellow'],['yellow','cyan','pink','yellow','purple'],[]]
+      ]
+    };
+
+    // ---------- DOM Elements ----------
+    const modeScreen = document.getElementById('modeScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    const board = document.getElementById('board');
+    const difficultyText = document.getElementById('difficultyText');
+    const levelText = document.getElementById('levelText');
+    const movesText = document.getElementById('movesText');
+    const restartBtn = document.getElementById('restartBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const modeBtn = document.getElementById('modeBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const completeBtn = document.getElementById('completeBtn');
+    const overlay = document.getElementById('winOverlay');
+
+    // ---------- Game State ----------
+    let currentMode = 'easy';
+    let currentLevel = 0;
+    let stacks = [];
+    let selectedIndex = null;
+    let moves = 0;
+    let history = [];
+    let locked = false;
+    let totalRings = 0;
+    let levelCompleted = false;
+    const MAX_RINGS_PER_STACK = 6;
+
+    // ---------- Audio ----------
+    let audioCtx = null;
+    function tone(freq, duration = 0.08, type = 'sine', gain = 0.04) {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        g.gain.setValueAtTime(gain, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+    const playSelect = () => tone(520, 0.06, 'sine', 0.035);
+    const playMove = () => tone(660, 0.08, 'triangle', 0.04);
+    const playInvalid = () => tone(180, 0.1, 'sawtooth', 0.025);
+    function playWin() {
+      tone(660, 0.08, 'triangle', 0.045);
+      setTimeout(() => tone(880, 0.1, 'triangle', 0.045), 90);
+      setTimeout(() => tone(1100, 0.14, 'triangle', 0.045), 180);
+    }
+
+    // ---------- Helpers ----------
+    function cloneLevel(level) { return level.map(stack => [...stack]); }
+
+    // ---------- Core Logic ----------
+    function startMode(mode) {
+      currentMode = mode;
+      currentLevel = 0;
+      modeScreen.classList.add('hidden-screen');
+      gameScreen.classList.remove('hidden-screen');
+      initLevel(0);
+      playSelect();
+    }
+
+    function initLevel(index) {
+      const modeLevels = LEVELS[currentMode];
+      currentLevel = (index + modeLevels.length) % modeLevels.length;
+      stacks = cloneLevel(modeLevels[currentLevel]);
+      totalRings = stacks.reduce((sum, s) => sum + s.length, 0);
+      selectedIndex = null;
+      moves = 0;
+      history = [];
+      locked = false;
+      levelCompleted = false;
+      overlay.classList.remove('show');
+      overlay.setAttribute('aria-hidden', 'true');
+      nextBtn.classList.remove('win-pulse');
+      nextBtn.disabled = true;
+      if (currentMode === 'easy') {
+        board.style.gridTemplateColumns = `repeat(${stacks.length}, minmax(60px, 1fr))`;
+      } else {
+        board.style.gridTemplateColumns = 'repeat(6, minmax(60px, 1fr))';
+      }
+      renderBoard();
+      updateHud();
+    }
+
+    function renderBoard() {
+      board.innerHTML = '';
+      stacks.forEach((stack, index) => {
+        const stackEl = document.createElement('button');
+        stackEl.type = 'button';
+        stackEl.className = 'stack';
+        stackEl.setAttribute('aria-label', `Stack ${index + 1}`);
+        stackEl.dataset.index = index;
+        const rod = document.createElement('div'); rod.className = 'rod';
+        const ringsWrap = document.createElement('div'); ringsWrap.className = 'rings';
+        const base = document.createElement('div'); base.className = 'base';
+        stack.forEach(color => {
+          const ring = document.createElement('div');
+          ring.className = `ring ${color}`;
+          ring.dataset.color = color;
+          ringsWrap.appendChild(ring);
+        });
+        stackEl.appendChild(rod);
+        stackEl.appendChild(ringsWrap);
+        stackEl.appendChild(base);
+        stackEl.addEventListener('click', () => handleStackTap(index, stackEl));
+        board.appendChild(stackEl);
+      });
+    }
+
+    function updateHud() {
+      difficultyText.textContent = currentMode.charAt(0).toUpperCase() + currentMode.slice(1);
+      levelText.textContent = String(currentLevel + 1).padStart(2, '0');
+      movesText.textContent = String(moves);
+    }
+
+    function handleStackTap(index, stackEl) {
+      if (locked) return;
+      if (selectedIndex === null) {
+        if (!stacks[index].length) { invalidStack(stackEl); return; }
+        selectedIndex = index;
+        stackEl.classList.add('selected');
+        playSelect();
+        return;
+      }
+      if (selectedIndex === index) { clearSelection(); return; }
+      moveRing(selectedIndex, index);
+    }
+
+    function clearSelection() {
+      document.querySelectorAll('.stack.selected').forEach(el => el.classList.remove('selected'));
+      selectedIndex = null;
+    }
+
+    function invalidStack(el) {
+      playInvalid();
+      el.classList.remove('invalid');
+      void el.offsetWidth;
+      el.classList.add('invalid');
+      setTimeout(() => el.classList.remove('invalid'), 320);
+    }
+
+    function moveRing(fromIndex, toIndex) {
+      if (locked) return;
+      const fromStack = stacks[fromIndex];
+      const toStack = stacks[toIndex];
+      if (toStack.length >= MAX_RINGS_PER_STACK) { invalidStack(board.children[toIndex]); return; }
+      locked = true;
+      history.push({ stacks: cloneLevel(stacks), moves });
+      const color = fromStack[fromStack.length - 1];
+      const fromEl = board.children[fromIndex];
+      const movingRing = fromEl.querySelector('.rings .ring:last-child');
+      if (!movingRing) { locked = false; return; }
+      const start = movingRing.getBoundingClientRect();
+      const fake = movingRing.cloneNode(true);
+      Object.assign(fake.style, {
+        position: 'fixed', left: start.left + 'px', top: start.top + 'px',
+        width: start.width + 'px', height: start.height + 'px',
+        zIndex: '50', margin: '0', pointerEvents: 'none'
+      });
+      document.body.appendChild(fake);
+      fromStack.pop();
+      renderBoard();
+      clearSelection();
+      const targetRings = board.children[toIndex].querySelector('.rings');
+      const temp = document.createElement('div');
+      temp.className = `ring ${color}`;
+      temp.style.visibility = 'hidden';
+      targetRings.appendChild(temp);
+      const end = temp.getBoundingClientRect();
+      const dx = end.left - start.left;
+      const dy = end.top - start.top;
+      requestAnimationFrame(() => {
+        fake.style.transition = 'transform .32s cubic-bezier(.2,.9,.2,1.15)';
+        fake.style.transform = `translate(${dx}px, ${dy}px)`;
+      });
+      setTimeout(() => {
+        fake.remove();
+        toStack.push(color);
+        renderBoard();
+        moves++;
+        updateHud();
+        playMove();
+        locked = false;
+        if (isWin()) handleWin();
+      }, 340);
+    }
+
+    function isWin() {
+      const colors = new Set();
+      for (const stack of stacks) { for (const color of stack) { colors.add(color); } }
+      const ringsPerColor = totalRings / colors.size;
+      let completeStacks = 0;
+      for (const stack of stacks) {
+        if (stack.length === 0) continue;
+        if (stack.length === ringsPerColor && stack.every(c => c === stack[0])) { completeStacks++; }
+        else { return false; }
+      }
+      return completeStacks === colors.size && completeStacks * ringsPerColor === totalRings;
+    }
+
+    function undoMove() {
+      if (!history.length || locked) { playInvalid(); return; }
+      const prev = history.pop();
+      stacks = cloneLevel(prev.stacks);
+      moves = prev.moves;
+      selectedIndex = null;
+      renderBoard();
+      updateHud();
+      playSelect();
+    }
+
+    function handleWin() {
+      levelCompleted = true;
+      nextBtn.disabled = false;
+      playWin();
+      nextBtn.classList.add('win-pulse');
+      setTimeout(() => { overlay.classList.add('show'); overlay.setAttribute('aria-hidden', 'false'); }, 450);
+      launchConfetti();
+    }
+
+    function launchConfetti() {
+      const palette = ['#7df6ff', '#d9a2ff', '#fff89b', '#ffc27d', '#ffb3db', '#ffaaa0', '#ffffff'];
+      for (let i = 0; i < 70; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti';
+        piece.style.left = Math.random() * 100 + 'vw';
+        piece.style.background = palette[Math.floor(Math.random() * palette.length)];
+        piece.style.animationDuration = (1.8 + Math.random() * 1.6) + 's';
+        piece.style.animationDelay = Math.random() * 0.35 + 's';
+        piece.style.setProperty('--x', ((Math.random() - 0.5) * 180) + 'px');
+        piece.style.transform = `rotate(${Math.random() * 180}deg)`;
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 3600);
+      }
+    }
+
+    // ---------- Event Listeners ----------
+    document.getElementById('easyBtn').addEventListener('click', () => startMode('easy'));
+    document.getElementById('mediumBtn').addEventListener('click', () => startMode('medium'));
+    document.getElementById('hardBtn').addEventListener('click', () => startMode('hard'));
+    restartBtn.addEventListener('click', () => { initLevel(currentLevel); playSelect(); });
+    undoBtn.addEventListener('click', undoMove);
+    modeBtn.addEventListener('click', () => {
+      gameScreen.classList.add('hidden-screen');
+      modeScreen.classList.remove('hidden-screen');
+      overlay.classList.remove('show');
+      overlay.setAttribute('aria-hidden', 'true');
+    });
+    nextBtn.addEventListener('click', () => {
+      if (!levelCompleted) { playInvalid(); return; }
+      initLevel(currentLevel + 1);
+      playSelect();
+    });
+    completeBtn.addEventListener('click', () => {
+      overlay.classList.remove('show');
+      overlay.setAttribute('aria-hidden', 'true');
+      nextBtn.classList.remove('win-pulse');
+      initLevel(currentLevel + 1);
+      playSelect();
+    });
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>
