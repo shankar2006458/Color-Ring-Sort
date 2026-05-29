@@ -696,9 +696,9 @@
         .tip1 {
             text-align: center;
             margin-top: 1px;
-            font-weight: 500;
+            font-weight: 600;
             font-size: .6rem;
-            opacity: .55;
+            opacity: .8;
             flex-shrink: 0;
         }
 
@@ -1170,6 +1170,10 @@
             <header class="hud" aria-label="Game status">
                 <div class="title-badge">
                     <h1 class="font-extrabold">Ring Sort</h1>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Best Moves</span>
+                    <strong id="bestText" class="block">--</strong>
                 </div>
                 <div class="stats">
                     <div class="stat-card">
@@ -1855,6 +1859,7 @@
             const difficultyText = document.getElementById('difficultyText');
             const levelText = document.getElementById('levelText');
             const movesText = document.getElementById('movesText');
+            const bestText = document.getElementById('bestText');
             const restartBtn = document.getElementById('restartBtn');
             const undoBtn = document.getElementById('undoBtn');
             const modeBtn = document.getElementById('modeBtn');
@@ -1879,38 +1884,55 @@
             // ──────────────────────────────────────
             // Audio helpers
             // ──────────────────────────────────────
-            let audioCtx = null;
+            const selectSound = new Audio("sounds/select.mp3");
+            const moveSounds = Array.from(
+                { length: 5 },
+                () => {
+                    const audio = new Audio("sounds/move.mp3");
+                    audio.preload = "auto";
+                    return audio;
+                }
+            );
 
-            function tone(freq, duration = 0.08, type = 'sine', gain = 0.04) {
-                try {
-                    audioCtx = audioCtx || new(window.AudioContext || window.webkitAudioContext)();
-                    const osc = audioCtx.createOscillator();
-                    const g = audioCtx.createGain();
-                    osc.type = type;
-                    osc.frequency.value = freq;
-                    g.gain.setValueAtTime(gain, audioCtx.currentTime);
-                    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-                    osc.connect(g);
-                    g.connect(audioCtx.destination);
-                    osc.start();
-                    osc.stop(audioCtx.currentTime + duration);
-                } catch (e) {}
+            let moveIndex = 0;
+            const errorSound = new Audio("sounds/error.mp3");
+            const winSound = new Audio("sounds/win.mp3");
+
+            function playSelect() {
+                selectSound.currentTime = 0;
+                selectSound.play();
             }
-            const playSelect = () => tone(520, 0.06, 'sine', 0.035);
-            const playMove = () => tone(660, 0.08, 'triangle', 0.04);
-            const playInvalid = () => tone(180, 0.1, 'sawtooth', 0.025);
+
+            function playMove() {
+                const s = moveSounds[moveIndex];
+
+                s.pause();
+                s.currentTime = 0;
+
+                s.play().catch(() => {});
+
+                moveIndex = (moveIndex + 1) % moveSounds.length;
+            }
+
+            function playInvalid() {
+                errorSound.currentTime = 0;
+                errorSound.play();
+            }
 
             function playWin() {
-                tone(660, 0.08, 'triangle', 0.045);
-                setTimeout(() => tone(880, 0.1, 'triangle', 0.045), 90);
-                setTimeout(() => tone(1100, 0.14, 'triangle', 0.045), 180);
+                winSound.currentTime = 0;
+                winSound.play();
             }
-
             // ──────────────────────────────────────
             // Helpers
             // ──────────────────────────────────────
             function cloneLevel(level) {
                 return level.map(stack => [...stack]);
+            }
+
+            function getBestMoves() {
+                const key = `best_${currentMode}`;
+                return localStorage.getItem(key) || '--';
             }
 
             function getGridMinWidth() {
@@ -1938,6 +1960,7 @@
                 totalRings = stacks.reduce((sum, s) => sum + s.length, 0);
                 selectedIndex = null;
                 moves = 0;
+                bestText.textContent = getBestMoves();
                 history = [];
                 locked = false;
                 levelCompleted = false;
@@ -2080,6 +2103,8 @@
                 const dx = endRect.left - startRect.left;
                 const dy = endRect.top - startRect.top;
 
+                playMove();
+
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         fakeRing.style.transition = 'transform .3s cubic-bezier(.2,.9,.2,1.15)';
@@ -2094,7 +2119,6 @@
                     renderBoard();
                     moves++;
                     updateHud();
-                    playMove();
                     locked = false;
 
                     if (isWin()) handleWin();
@@ -2141,6 +2165,12 @@
             function handleWin() {
                 levelCompleted = true;
                 nextBtn.disabled = false;
+                const key = `best_${currentMode}`;
+                const best = Number(localStorage.getItem(key) || Infinity);
+
+                if (moves < best) {
+                    localStorage.setItem(key, moves);
+                }
                 playWin();
                 nextBtn.classList.add('win-pulse');
                 setTimeout(() => {
